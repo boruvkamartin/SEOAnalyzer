@@ -13,6 +13,7 @@ from link_validator import LinkValidator
 from excel_exporter import ExcelExporter
 
 
+
 def detect_duplicates(results: List[Dict]) -> Tuple[List[str], List[str]]:
     """
     Detekuje duplicitní title a description napříč všemi stránkami
