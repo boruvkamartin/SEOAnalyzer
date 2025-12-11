@@ -94,28 +94,65 @@ title: Hlavní stránka
 <div id="loading" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
   <div class="flex items-center space-x-4">
     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    <div>
+    <div class="flex-1">
       <p class="font-semibold text-gray-900" id="loadingText">Probíhá analýza...</p>
-      <p class="text-sm text-gray-600" id="loadingSubtext"></p>
+      <p class="text-sm text-gray-600" id="loadingSubtext">Inicializace...</p>
     </div>
+    <button id="cancelBtn" class="btn-secondary text-sm hidden">Zrušit</button>
   </div>
   <div class="mt-4">
     <div class="w-full bg-gray-200 rounded-full h-2">
       <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
     </div>
+    <p class="text-xs text-gray-500 mt-1 text-center" id="progressText">0%</p>
   </div>
 </div>
 
 <!-- Results -->
 <div id="results" class="hidden">
+  <!-- Dashboard/Statistics -->
+  <div id="dashboard" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
+  
   <!-- Summary -->
   <div id="summary" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
   
-  <!-- Export button -->
+  <!-- Filters and sorting -->
   <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-    <button id="exportBtn" class="btn-secondary">
-      📥 Exportovat do Excelu
-    </button>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Filtr podle statusu</label>
+        <select id="statusFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <option value="all">Všechny</option>
+          <option value="error">Jen chyby</option>
+          <option value="warning">Jen varování</option>
+          <option value="ok">Jen OK</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Řazení</label>
+        <select id="sortBy" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <option value="status">Podle statusu</option>
+          <option value="url">Podle URL</option>
+          <option value="issues">Podle počtu problémů</option>
+          <option value="title">Podle title</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Vyhledávání</label>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Hledat v URL nebo title..."
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+    </div>
+    <div class="flex justify-between items-center">
+      <p class="text-sm text-gray-600" id="resultsCount">Zobrazeno 0 výsledků</p>
+      <button id="exportBtn" class="btn-secondary">
+        📥 Exportovat do Excelu
+      </button>
+    </div>
   </div>
   
   <!-- Results table -->
@@ -128,17 +165,37 @@ title: Hlavní stránka
       <table id="resultsTable" class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="status">
+              Status <span class="sort-indicator"></span>
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="url">
+              URL <span class="sort-indicator"></span>
+            </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">H1</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Problémy</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akce</th>
           </tr>
         </thead>
         <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-200">
         </tbody>
       </table>
+    </div>
+  </div>
+  
+  <!-- Detail Modal -->
+  <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-xl font-semibold text-gray-900" id="modalTitle">Detail stránky</h3>
+        <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div class="p-6" id="modalContent">
+        <!-- Content will be inserted here -->
+      </div>
+    </div>
+  </div>
     </div>
   </div>
 </div>

@@ -22,19 +22,32 @@ Webová aplikace pro analýzu SEO atributů všech stránek z sitemapy. Postaven
 
 ### Pokročilé SEO kontroly
 - ✅ Detekce strukturovaných dat (JSON-LD, Microdata, RDFa)
+- ✅ **Validace strukturovaných dat** - kontrola platnosti JSON-LD
 - ✅ Kontrola hreflang tagů pro vícejazyčné weby
 - ✅ Kontrola schema.org markup
 - ✅ Kontrola HTTPS
 
-### Kontrola odkazů
+### Rozšířené SEO metriky
+- ✅ **Velikost stránky** - kontrola velikosti HTML (varování při > 3MB)
+- ✅ **Externí a interní odkazy** - počítání odkazů
+- ✅ **Mobile-friendly kontrola** - kontrola viewport meta tagu
+- ✅ **Favicon kontrola** - detekce chybějícího faviconu
+- ✅ **Redirect typy** - detekce 301 vs 302 redirectů
+
+### Pokročilé kontroly
+- ✅ **Sitemap validace** - kontrola validity a struktury sitemapy
+- ✅ **robots.txt kontrola** - kontrola existence a obsahu robots.txt
 - ✅ Kontrola broken links - validace všech odkazů na stránce (404, redirecty)
 - ✅ Kontrola broken images
 
-### Reporting
-- ✅ Zobrazení výsledků přímo na webu
+### UI vylepšení
+- ✅ **Real-time progress updates** - zobrazení průběhu analýzy
+- ✅ **Filtrování výsledků** - podle statusu, vyhledávání v URL/title
+- ✅ **Řazení výsledků** - podle statusu, URL, počtu problémů, title
+- ✅ **Detailní zobrazení stránky** - modal s kompletními informacemi
+- ✅ **Dashboard a statistiky** - přehledné metriky a top problémy
+- ✅ Zobrazení pouze problémových stránek (OK stránky skryté)
 - ✅ Barevné označení (chyby červeně, varování žlutě, OK zeleně)
-- ✅ Přehledová stránka se shrnutím problémů
-- ✅ Detailní tabulka s kompletními informacemi o každé stránce
 - ✅ Export do Excelu s přehledovou a detailní stránkou
 
 ## 📦 Instalace
@@ -111,6 +124,7 @@ Excel soubor obsahuje dva listy:
 
 2. **Detailní data**
    - Kompletní tabulka se všemi SEO atributy pro každou stránku
+   - **Nové sloupce**: Velikost stránky, externí/interní odkazy, mobile-friendly, viewport, favicon, redirect typ
    - Barevné označení řádků podle statusu
 
 ## 🛠️ Technologie

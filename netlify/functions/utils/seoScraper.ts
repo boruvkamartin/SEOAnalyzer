@@ -20,7 +20,7 @@ export interface SEOResult {
   canonical?: string;
   robots?: string;
   hreflang?: Array<{ lang: string; url: string }>;
-  structured_data?: Array<{ type: string; data: any }>;
+  structured_data?: Array<{ type: string; data: any; valid?: boolean; errors?: string[] }>;
   images_without_alt?: number;
   images_total?: number;
   https?: boolean;
@@ -28,6 +28,14 @@ export interface SEOResult {
   issues: string[];
   error?: string;
   broken_links_count?: number;
+  // Extended metrics
+  page_size?: number; // in bytes
+  external_links_count?: number;
+  internal_links_count?: number;
+  mobile_friendly?: boolean;
+  viewport?: string;
+  favicon?: string;
+  redirect_type?: number; // 301, 302, etc.
 }
 
 export class SEOScraper {
@@ -43,14 +51,35 @@ export class SEOScraper {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async fetchPage(url: string): Promise<{ $: cheerio.CheerioAPI; html: string } | null> {
+  async fetchPage(url: string): Promise<{ $: cheerio.CheerioAPI; html: string; size: number; redirectType?: number } | null> {
     try {
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'SEO Analyzer Bot 1.0'
         },
-        timeout: this.timeout
+        timeout: this.timeout,
+        redirect: 'manual'
       } as any);
+
+      // Handle redirects
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location) {
+          // Follow redirect once
+          const redirectResponse = await fetch(location, {
+            headers: {
+              'User-Agent': 'SEO Analyzer Bot 1.0'
+            },
+            timeout: this.timeout
+          } as any);
+          
+          if (redirectResponse.ok) {
+            const html = await redirectResponse.text();
+            const $ = cheerio.load(html);
+            return { $, html, size: html.length, redirectType: response.status };
+          }
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -59,7 +88,7 @@ export class SEOScraper {
       const html = await response.text();
       const $ = cheerio.load(html);
 
-      return { $, html };
+      return { $, html, size: html.length };
     } catch (error) {
       console.error(`Error fetching ${url}:`, error);
       return null;
@@ -83,7 +112,23 @@ export class SEOScraper {
       return result;
     }
 
-    const { $ } = page;
+    const { $, html, size, redirectType } = page;
+    
+    // Page size
+    result.page_size = size;
+    if (size > 3 * 1024 * 1024) { // > 3MB
+      result.issues.push(`Stránka je příliš velká (${(size / 1024 / 1024).toFixed(2)} MB, doporučeno < 3MB)`);
+      if (result.status === 'ok') result.status = 'warning';
+    }
+    
+    // Redirect type
+    if (redirectType) {
+      result.redirect_type = redirectType;
+      if (redirectType === 302) {
+        result.issues.push('Používá se dočasný redirect (302), doporučeno 301');
+        if (result.status === 'ok') result.status = 'warning';
+      }
+    }
 
     // Basic SEO elements
     result.title = $('title').first().text().trim() || undefined;
@@ -120,19 +165,54 @@ export class SEOScraper {
       result.hreflang = hreflang;
     }
 
-    // Structured data
-    const structuredData: Array<{ type: string; data: any }> = [];
+    // Structured data with validation
+    const structuredData: Array<{ type: string; data: any; valid?: boolean; errors?: string[] }> = [];
     
-    // JSON-LD
+    // JSON-LD with validation
     $('script[type="application/ld+json"]').each((_, el) => {
       try {
         const jsonText = $(el).html();
         if (jsonText) {
           const data = JSON.parse(jsonText);
-          structuredData.push({ type: 'JSON-LD', data });
+          const errors: string[] = [];
+          let valid = true;
+          
+          // Basic validation
+          if (Array.isArray(data)) {
+            data.forEach((item, idx) => {
+              if (!item['@type'] && !item['@context']) {
+                errors.push(`Položka ${idx + 1}: chybí @type nebo @context`);
+                valid = false;
+              }
+            });
+          } else {
+            if (!data['@type'] && !data['@context']) {
+              errors.push('Chybí @type nebo @context');
+              valid = false;
+            }
+          }
+          
+          structuredData.push({ 
+            type: 'JSON-LD', 
+            data,
+            valid: errors.length === 0,
+            errors: errors.length > 0 ? errors : undefined
+          });
+          
+          if (!valid) {
+            result.issues.push(`Neplatné strukturované data (JSON-LD): ${errors.join(', ')}`);
+            if (result.status === 'ok') result.status = 'warning';
+          }
         }
       } catch (e) {
-        // Invalid JSON
+        structuredData.push({ 
+          type: 'JSON-LD', 
+          data: {},
+          valid: false,
+          errors: ['Neplatný JSON']
+        });
+        result.issues.push('Neplatné JSON-LD strukturované data');
+        if (result.status === 'ok') result.status = 'warning';
       }
     });
 
@@ -161,6 +241,54 @@ export class SEOScraper {
       }
     });
     result.images_without_alt = imagesWithoutAlt;
+
+    // Links analysis
+    const allLinks = $('a[href]');
+    let externalLinks = 0;
+    let internalLinks = 0;
+    const baseDomain = new URL(url).hostname;
+    
+    allLinks.each((_, el) => {
+      const href = $(el).attr('href');
+      if (href) {
+        try {
+          if (href.startsWith('http://') || href.startsWith('https://')) {
+            const linkUrl = new URL(href);
+            if (linkUrl.hostname === baseDomain || linkUrl.hostname.endsWith('.' + baseDomain)) {
+              internalLinks++;
+            } else {
+              externalLinks++;
+            }
+          } else if (href.startsWith('/') || href.startsWith('./') || href.startsWith('../')) {
+            internalLinks++;
+          }
+        } catch (e) {
+          // Invalid URL, skip
+        }
+      }
+    });
+    
+    result.external_links_count = externalLinks;
+    result.internal_links_count = internalLinks;
+
+    // Mobile-friendly check
+    const viewport = $('meta[name="viewport"]').attr('content');
+    result.viewport = viewport || undefined;
+    result.mobile_friendly = !!viewport;
+    
+    if (!viewport) {
+      result.issues.push('Chybí viewport meta tag (stránka nemusí být mobile-friendly)');
+      if (result.status === 'ok') result.status = 'warning';
+    }
+
+    // Favicon
+    const favicon = $('link[rel="icon"], link[rel="shortcut icon"]').attr('href');
+    result.favicon = favicon ? new URL(favicon, url).href : undefined;
+    
+    if (!favicon) {
+      result.issues.push('Chybí favicon');
+      if (result.status === 'ok') result.status = 'warning';
+    }
 
     // HTTPS
     result.https = url.startsWith('https://');

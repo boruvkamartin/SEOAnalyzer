@@ -2,6 +2,7 @@ import { Handler } from '@netlify/functions';
 import { SitemapParser } from '../utils/sitemapParser';
 import { SEOScraper } from '../utils/seoScraper';
 import { LinkValidator } from '../utils/linkValidator';
+import { AdvancedChecks } from '../utils/advancedChecks';
 
 interface AnalyzeRequest {
   url: string;
@@ -15,6 +16,8 @@ interface AnalyzeResponse {
   results: any[];
   duplicateTitles: string[];
   duplicateDescriptions: string[];
+  advancedChecks?: any;
+  statistics?: any;
 }
 
 const detectDuplicates = (results: any[]): { titles: string[]; descriptions: string[] } => {
@@ -68,6 +71,25 @@ const addDuplicateWarnings = (
       }
     }
   });
+};
+
+const getTopIssues = (results: any[]): Array<{ issue: string; count: number }> => {
+  const issueCounts = new Map<string, number>();
+  
+  results.forEach(result => {
+    if (result.issues && Array.isArray(result.issues)) {
+      result.issues.forEach((issue: string) => {
+        // Normalize issue (remove counts)
+        const normalizedIssue = issue.replace(/\d+/g, 'X').replace(/X/g, '');
+        issueCounts.set(issue, (issueCounts.get(issue) || 0) + 1);
+      });
+    }
+  });
+
+  return Array.from(issueCounts.entries())
+    .map(([issue, count]) => ({ issue, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 };
 
 export const handler: Handler = async (event, context) => {
@@ -194,10 +216,36 @@ export const handler: Handler = async (event, context) => {
     const { titles: duplicateTitles, descriptions: duplicateDescriptions } = detectDuplicates(results);
     addDuplicateWarnings(results, duplicateTitles, duplicateDescriptions);
 
+    // Step 5: Advanced checks (sitemap, robots.txt)
+    const advancedChecks = new AdvancedChecks(timeout * 1000);
+    const sitemapCheck = await advancedChecks.checkSitemap(url);
+    const robotsCheck = await advancedChecks.checkRobotsTxt(url);
+
+    // Step 6: Calculate statistics
+    const statistics = {
+      totalPages: results.length,
+      errorPages: results.filter(r => r.status === 'error').length,
+      warningPages: results.filter(r => r.status === 'warning').length,
+      okPages: results.filter(r => r.status === 'ok').length,
+      avgPageSize: results.filter(r => r.page_size).length > 0
+        ? Math.round(results.reduce((sum, r) => sum + (r.page_size || 0), 0) / results.filter(r => r.page_size).length)
+        : 0,
+      totalExternalLinks: results.reduce((sum, r) => sum + (r.external_links_count || 0), 0),
+      totalInternalLinks: results.reduce((sum, r) => sum + (r.internal_links_count || 0), 0),
+      mobileFriendlyPages: results.filter(r => r.mobile_friendly).length,
+      httpsPages: results.filter(r => r.https).length,
+      topIssues: getTopIssues(results)
+    };
+
     const response: AnalyzeResponse = {
       results,
       duplicateTitles,
-      duplicateDescriptions
+      duplicateDescriptions,
+      advancedChecks: {
+        sitemap: sitemapCheck,
+        robots: robotsCheck
+      },
+      statistics
     };
 
     return {
