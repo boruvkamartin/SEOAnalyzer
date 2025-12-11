@@ -6,6 +6,23 @@ let currentSort = 'status';
 let currentFilter = 'all';
 let currentSearch = '';
 
+// Helper functions for SEO score display
+function getScoreColor(score) {
+  if (score >= 90) return 'bg-green-500';
+  if (score >= 75) return 'bg-blue-500';
+  if (score >= 60) return 'bg-yellow-500';
+  if (score >= 40) return 'bg-orange-500';
+  return 'bg-red-500';
+}
+
+function getScoreTextColor(score) {
+  if (score >= 90) return 'text-green-500';
+  if (score >= 75) return 'text-blue-500';
+  if (score >= 60) return 'text-yellow-500';
+  if (score >= 40) return 'text-orange-500';
+  return 'text-red-500';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('analyzeForm');
   const loading = document.getElementById('loading');
@@ -196,6 +213,10 @@ function applyFilters() {
         return (b.issues?.length || 0) - (a.issues?.length || 0);
       case 'title':
         return (a.title || '').localeCompare(b.title || '');
+      case 'score':
+        const scoreA = a.seo_score?.score || 0;
+        const scoreB = b.seo_score?.score || 0;
+        return scoreB - scoreA; // Sort descending (highest score first)
       case 'status':
       default:
         const statusOrder = { 'error': 0, 'warning': 1, 'ok': 2 };
@@ -220,7 +241,7 @@ function renderTable(results) {
   if (results.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
           <p class="text-lg font-semibold">Žádné výsledky</p>
           <p class="text-sm mt-2">Zkuste změnit filtry nebo vyhledávání.</p>
         </td>
@@ -262,6 +283,20 @@ function renderTable(results) {
       <td class="px-6 py-4 text-sm">
         ${result.h1 || '<span class="text-gray-400">Chybí</span>'}
       </td>
+      <td class="px-6 py-4 whitespace-nowrap">
+        ${result.seo_score ? `
+          <div class="flex items-center space-x-2">
+            <div class="relative">
+              <div class="w-16 h-16 rounded-full ${getScoreColor(result.seo_score.score)} flex items-center justify-center">
+                <span class="text-lg font-bold text-white">${result.seo_score.score}</span>
+              </div>
+              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center border-2 ${getScoreColor(result.seo_score.score)}">
+                <span class="text-xs font-bold ${getScoreTextColor(result.seo_score.score)}">${result.seo_score.grade}</span>
+              </div>
+            </div>
+          </div>
+        ` : '<span class="text-gray-400">-</span>'}
+      </td>
       <td class="px-6 py-4 text-sm">
         ${result.issues && result.issues.length > 0 ? 
           `<ul class="list-disc list-inside text-xs">${result.issues.slice(0, 3).map(issue => `<li>${issue}</li>`).join('')}</ul>
@@ -299,6 +334,63 @@ function showDetail(result) {
   
   modalContent.innerHTML = `
     <div class="space-y-6">
+      <!-- SEO Score -->
+      ${result.seo_score ? `
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-2">SEO Skóre</h4>
+            <div class="flex items-center space-x-4">
+              <div class="relative">
+                <div class="w-24 h-24 rounded-full ${getScoreColor(result.seo_score.score)} flex items-center justify-center shadow-lg">
+                  <span class="text-3xl font-bold text-white">${result.seo_score.score}</span>
+                </div>
+                <div class="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-white flex items-center justify-center border-4 ${getScoreColor(result.seo_score.score)} shadow-md">
+                  <span class="text-lg font-bold ${getScoreTextColor(result.seo_score.score)}">${result.seo_score.grade}</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Základní SEO</p>
+                <p class="text-lg font-semibold">${result.seo_score.breakdown.basic}/100</p>
+                <p class="text-sm text-gray-600 mt-2">Obsah</p>
+                <p class="text-lg font-semibold">${result.seo_score.breakdown.content}/100</p>
+                <p class="text-sm text-gray-600 mt-2">Technické</p>
+                <p class="text-lg font-semibold">${result.seo_score.breakdown.technical}/100</p>
+                <p class="text-sm text-gray-600 mt-2">Performance</p>
+                <p class="text-lg font-semibold">${result.seo_score.breakdown.performance}/100</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+      
+      <!-- Recommendations -->
+      ${result.seo_score && result.seo_score.recommendations && result.seo_score.recommendations.length > 0 ? `
+      <div>
+        <h4 class="text-lg font-semibold mb-3">Doporučení (${result.seo_score.recommendations.length})</h4>
+        <div class="space-y-3">
+          ${result.seo_score.recommendations.map(rec => `
+            <div class="border-l-4 ${rec.priority === 'high' ? 'border-red-500' : rec.priority === 'medium' ? 'border-yellow-500' : 'border-blue-500'} bg-gray-50 p-4 rounded">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="px-2 py-1 text-xs font-semibold rounded ${rec.priority === 'high' ? 'bg-red-100 text-red-800' : rec.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">
+                      ${rec.priority === 'high' ? 'Vysoká' : rec.priority === 'medium' ? 'Střední' : 'Nízká'} priorita
+                    </span>
+                    <span class="text-xs text-gray-500">${rec.category}</span>
+                  </div>
+                  <p class="font-semibold text-gray-900 mb-1">${rec.issue}</p>
+                  <p class="text-sm text-gray-700 mb-1">${rec.recommendation}</p>
+                  <p class="text-xs text-gray-500">Dopad: ${rec.impact}</p>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
       <!-- Basic Info -->
       <div>
         <h4 class="text-lg font-semibold mb-3">Základní informace</h4>
@@ -534,6 +626,27 @@ function displayResults(data) {
         <p class="text-sm text-green-600">OK</p>
         <p class="text-2xl font-bold text-green-900">${okCount}</p>
       </div>
+      ${(() => {
+        const scores = data.results.filter(r => r.seo_score?.score !== undefined).map(r => r.seo_score.score);
+        if (scores.length > 0) {
+          const avgScore = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+          return `
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <p class="text-sm text-blue-600">Průměrné SEO skóre</p>
+              <div class="flex items-center space-x-2 mt-1">
+                <div class="w-12 h-12 rounded-full ${getScoreColor(avgScore)} flex items-center justify-center">
+                  <span class="text-lg font-bold text-white">${avgScore}</span>
+                </div>
+                <div>
+                  <p class="text-2xl font-bold text-blue-900">${avgScore}/100</p>
+                  <p class="text-xs text-blue-600">${scores.length} stránek hodnoceno</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        return '';
+      })()}
     </div>
     ${data.duplicateTitles.length > 0 || data.duplicateDescriptions.length > 0 ? `
       <div class="mt-4 p-4 bg-yellow-50 rounded-lg">

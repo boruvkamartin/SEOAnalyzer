@@ -6,6 +6,10 @@ export interface SEOScraperOptions {
   delay?: number;
 }
 
+import { ContentMetrics } from './contentAnalyzer';
+import { PerformanceMetrics } from './performanceAnalyzer';
+import { SEOScoreResult } from './seoScore';
+
 export interface SEOResult {
   url: string;
   title?: string;
@@ -36,6 +40,10 @@ export interface SEOResult {
   viewport?: string;
   favicon?: string;
   redirect_type?: number; // 301, 302, etc.
+  // New metrics
+  content_metrics?: ContentMetrics;
+  performance_metrics?: PerformanceMetrics;
+  seo_score?: SEOScoreResult;
 }
 
 export class SEOScraper {
@@ -51,7 +59,7 @@ export class SEOScraper {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async fetchPage(url: string): Promise<{ $: cheerio.CheerioAPI; html: string; size: number; redirectType?: number } | null> {
+  async fetchPage(url: string): Promise<{ $: cheerio.CheerioAPI; html: string; size: number; redirectType?: number; response?: Response } | null> {
     try {
       const response = await fetch(url, {
         headers: {

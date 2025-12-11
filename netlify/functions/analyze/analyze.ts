@@ -3,6 +3,10 @@ import { SitemapParser } from '../utils/sitemapParser';
 import { SEOScraper } from '../utils/seoScraper';
 import { LinkValidator } from '../utils/linkValidator';
 import { AdvancedChecks } from '../utils/advancedChecks';
+import { analyzeContent } from '../utils/contentAnalyzer';
+import { analyzePerformance, checkResponseHeaders } from '../utils/performanceAnalyzer';
+import { calculateSEOScore } from '../utils/seoScore';
+import fetch from 'node-fetch';
 
 interface AnalyzeRequest {
   url: string;
@@ -171,6 +175,61 @@ export const handler: Handler = async (event, context) => {
     const results: any[] = [];
     for (const urlItem of urls) {
       const result = await seoScraper.scrapeUrl(urlItem);
+      
+      // Add content analysis and performance metrics
+      if (!result.error) {
+        try {
+          const page = await seoScraper.fetchPage(urlItem);
+          if (page) {
+            // Content analysis
+            const contentMetrics = analyzeContent(page.$);
+            result.content_metrics = contentMetrics;
+            
+            // Performance analysis - fetch again for headers (we need fresh response)
+            try {
+              const perfResponse = await fetch(urlItem, {
+                headers: { 'User-Agent': 'SEO Analyzer Bot 1.0' },
+                timeout: timeout * 1000
+              } as any);
+              
+              if (perfResponse.ok) {
+                const perfMetrics = await analyzePerformance(urlItem, perfResponse as any);
+                result.performance_metrics = perfMetrics;
+              } else {
+                // Fallback - use basic checks from headers if available
+                const headerCheck = checkResponseHeaders(perfResponse as any);
+                result.performance_metrics = {
+                  compression: headerCheck.compression,
+                  compressionType: headerCheck.compressionType as any,
+                  cacheHeaders: headerCheck.cacheHeaders,
+                  cacheControl: headerCheck.cacheControl,
+                  minified: false,
+                  hasLazyLoading: page.html.includes('loading="lazy"') || page.html.includes('data-lazy')
+                };
+              }
+            } catch (perfError) {
+              // If performance check fails, use basic metrics from HTML
+              result.performance_metrics = {
+                compression: false,
+                cacheHeaders: false,
+                minified: false,
+                hasLazyLoading: page.html.includes('loading="lazy"') || page.html.includes('data-lazy')
+              };
+            }
+            
+            // Calculate SEO score
+            const seoScore = calculateSEOScore(
+              result, 
+              contentMetrics, 
+              result.performance_metrics
+            );
+            result.seo_score = seoScore;
+          }
+        } catch (e) {
+          console.error(`Error analyzing content/performance for ${urlItem}:`, e);
+        }
+      }
+      
       results.push(result);
     }
 

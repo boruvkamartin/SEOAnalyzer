@@ -88,6 +88,17 @@ export const handler: Handler = async (event, context) => {
 
     summarySheet.addRow({ metric: 'Průměrná délka title', value: avgTitleLength });
     summarySheet.addRow({ metric: 'Průměrná délka description', value: avgDescLength });
+    
+    // SEO Score statistics
+    const scores = body.results.filter(r => r.seo_score?.score !== undefined).map(r => r.seo_score.score);
+    if (scores.length > 0) {
+      const avgScore = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+      const minScore = Math.min(...scores);
+      const maxScore = Math.max(...scores);
+      summarySheet.addRow({ metric: 'Průměrné SEO skóre', value: avgScore });
+      summarySheet.addRow({ metric: 'Nejlepší SEO skóre', value: maxScore });
+      summarySheet.addRow({ metric: 'Nejhorší SEO skóre', value: minScore });
+    }
 
     // Style summary sheet
     summarySheet.getRow(1).font = { bold: true };
@@ -123,6 +134,14 @@ export const handler: Handler = async (event, context) => {
       { header: 'Celkem obrázků', key: 'images_total', width: 15 },
       { header: 'Broken links', key: 'broken_links_count', width: 15 },
       { header: 'HTTPS', key: 'https', width: 10 },
+      { header: 'SEO Skóre', key: 'seo_score', width: 12 },
+      { header: 'SEO Grade', key: 'seo_grade', width: 12 },
+      { header: 'Počet slov', key: 'word_count', width: 12 },
+      { header: 'Čitelnost', key: 'readability', width: 12 },
+      { header: 'Keyword density', key: 'keyword_density', width: 15 },
+      { header: 'Komprese', key: 'compression', width: 12 },
+      { header: 'Cache headers', key: 'cache_headers', width: 15 },
+      { header: 'Minifikováno', key: 'minified', width: 12 },
       { header: 'Problémy', key: 'issues', width: 60 }
     ];
 
@@ -151,6 +170,14 @@ export const handler: Handler = async (event, context) => {
         images_total: result.images_total || 0,
         broken_links_count: result.broken_links_count || 0,
         https: result.https ? 'Ano' : 'Ne',
+        seo_score: result.seo_score?.score || '',
+        seo_grade: result.seo_score?.grade || '',
+        word_count: result.content_metrics?.wordCount || '',
+        readability: result.content_metrics?.readability || '',
+        keyword_density: result.content_metrics?.keywordDensity ? `${result.content_metrics.keywordDensity.toFixed(2)}%` : '',
+        compression: result.performance_metrics?.compression ? (result.performance_metrics.compressionType || 'Ano') : 'Ne',
+        cache_headers: result.performance_metrics?.cacheHeaders ? 'Ano' : 'Ne',
+        minified: result.performance_metrics?.minified ? 'Ano' : 'Ne',
         issues: result.issues ? result.issues.join('; ') : ''
       });
 
