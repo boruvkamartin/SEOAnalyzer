@@ -1,0 +1,46 @@
+{
+  "name": "seo-analyzer-web",
+  "version": "1.0.0",
+  "description": "Webová aplikace pro analýzu SEO atributů",
+  "scripts": {
+    "build": "npm run build:tailwind && npm run build:eleventy && npm run build:functions",
+    "build:tailwind": "tailwindcss -i ./src/css/input.css -o ./src/css/styles.css --minify",
+    "build:eleventy": "eleventy",
+    "build:functions": "tsc --project netlify/functions/tsconfig.json",
+    "predev": "npm run build:tailwind && npm run build:functions",
+    "dev": "npx netlify dev",
+    "dev:build": "npm run build:tailwind && npm run build:functions",
+    "dev:server": "eleventy --serve",
+    "dev:eleventy": "eleventy --serve --watch",
+    "dev:tailwind": "tailwindcss -i ./src/css/input.css -o ./_site/css/styles.css --watch",
+    "start": "npx netlify dev",
+    "clean": "rm -rf _site netlify/functions/**/*.js"
+  },
+  "keywords": [
+    "seo",
+    "analyzer",
+    "eleventy",
+    "netlify"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@11ty/eleventy": "^2.0.1",
+    "@netlify/plugin-nextjs": "^4.39.0",
+    "@types/node": "^20.10.0",
+    "@types/xml2js": "^0.4.14",
+    "autoprefixer": "^10.4.16",
+    "netlify-cli": "^17.0.0",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.4.0",
+    "cheerio": "^1.0.0-rc.12",
+    "exceljs": "^4.4.0",
+    "node-fetch": "^3.3.2",
+    "xml2js": "^0.6.2"
+  }
+}

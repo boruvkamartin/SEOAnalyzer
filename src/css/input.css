@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .status-ok {
+    @apply bg-seo-green text-white;
+  }
+  
+  .status-warning {
+    @apply bg-seo-yellow text-white;
+  }
+  
+  .status-error {
+    @apply bg-seo-red text-white;
+  }
+}
+

@@ -1,8 +1,8 @@
-# SEO Analyzer
+# SEO Analyzer - Webová aplikace
 
-CLI aplikace v Pythonu pro analýzu SEO atributů všech stránek z sitemapy a export výsledků do Excel s pokročilými validacemi.
+Webová aplikace pro analýzu SEO atributů všech stránek z sitemapy. Postaveno s Eleventy, TypeScript, Tailwind CSS a nasazeno na Netlify.
 
-## Funkce
+## 🚀 Funkce
 
 ### Základní SEO kontroly
 - ✅ Extrakce title, meta description, H1 tagů
@@ -31,146 +31,148 @@ CLI aplikace v Pythonu pro analýzu SEO atributů všech stránek z sitemapy a e
 - ✅ Kontrola broken images
 
 ### Reporting
-- ✅ Barevné označení v Excelu (chyby červeně, varování žlutě, OK zeleně)
-- ✅ Přehledová stránka se shrnutím problémů (počet chyb, varování, OK stránek, top problémy)
-- ✅ Detailní data s kompletními informacemi o každé stránce
+- ✅ Zobrazení výsledků přímo na webu
+- ✅ Barevné označení (chyby červeně, varování žlutě, OK zeleně)
+- ✅ Přehledová stránka se shrnutím problémů
+- ✅ Detailní tabulka s kompletními informacemi o každé stránce
+- ✅ Export do Excelu s přehledovou a detailní stránkou
 
-## Instalace
+## 📦 Instalace
 
 1. Klonujte nebo stáhněte tento repozitář
 
 2. Nainstalujte závislosti:
 ```bash
-pip install -r requirements.txt
+npm install
 ```
 
-## Použití
-
-### Základní použití
+3. **DŮLEŽITÉ**: Pro vývoj použijte Netlify dev server (spustí jak frontend, tak backend funkce):
 ```bash
-python main.py https://www.dmpagency.cz/
+npm run dev
 ```
 
-### S vlastním výstupním souborem
+Aplikace bude dostupná na `http://localhost:8888` (nebo jiný port, který Netlify zobrazí)
+
+**POZOR**: Pokud spustíte jen `eleventy --serve`, Netlify Functions nebudou dostupné a API volání selžou!
+
+## 🏗️ Build
+
+Pro produkční build:
 ```bash
-python main.py https://www.dmpagency.cz/ --output seo_report.xlsx
+npm run build
 ```
 
-### S vlastními parametry
+## 🌐 Nasazení na Netlify
+
+1. Připojte svůj GitHub/GitLab/Bitbucket repozitář k Netlify
+
+2. Nastavte build settings:
+   - Build command: `npm run build`
+   - Publish directory: `_site`
+
+3. Netlify automaticky detekuje `netlify.toml` a nasadí aplikaci
+
+Nebo použijte Netlify CLI:
 ```bash
-python main.py https://www.dmpagency.cz/ --timeout 15 --workers 10 --delay 0.3
+npm install -g netlify-cli
+netlify deploy --prod
 ```
 
-### Testovací režim (prvních 10 stránek)
-```bash
-python main.py https://www.dmpagency.cz/ --limit 10
-```
+## 💻 Použití
 
-### Bez validace broken links (rychlejší)
-```bash
-python main.py https://www.dmpagency.cz/ --skip-links
-```
+1. Otevřete webovou aplikaci
+2. Zadejte URL webu k analýze (např. `https://www.example.com`)
+3. Volitelně nastavte parametry:
+   - **Timeout**: Timeout pro HTTP požadavky (výchozí: 10s)
+   - **Delay**: Zpoždění mezi requesty (výchozí: 0.5s)
+   - **Limit**: Omezit počet analyzovaných stránek (volitelné)
+   - **Přeskočit validaci broken links**: Pro rychlejší analýzu
+4. Klikněte na "Spustit analýzu"
+5. Po dokončení analýzy můžete výsledky exportovat do Excelu
 
-### Spuštění pomocí BAT souboru (Windows)
-Jednoduše dvojklikněte na `run_seo_analyzer.bat` a následujte instrukce v menu.
+## 📊 Výstup
 
-## Parametry
+### Webové rozhraní
+- **Přehled**: Shrnutí s počtem chyb, varování a OK stránek
+- **Tabulka**: Detailní seznam všech stránek s jejich SEO atributy a problémy
+- **Barevné označení**:
+  - 🔴 Červeně: stránky s chybami
+  - 🟡 Žlutě: stránky s varováními
+  - 🟢 Zeleně: OK stránky
 
-- `url` (povinný) - URL webu k analýze (např. https://www.dmpagency.cz/)
-- `--output`, `-o` - Výstupní Excel soubor (výchozí: seo_report.xlsx)
-- `--timeout` - Timeout pro HTTP požadavky v sekundách (výchozí: 10)
-- `--workers` - Počet paralelních workerů pro validaci odkazů (výchozí: 5)
-- `--delay` - Zpoždění mezi requesty v sekundách (výchozí: 0.5)
-- `--skip-links` - Přeskočit validaci broken links (rychlejší analýza)
-- `--limit` - Omezit počet analyzovaných stránek (užitečné pro testování, např. `--limit 10`)
+### Excel export
+Excel soubor obsahuje dva listy:
 
-## Výstup
+1. **Přehled**
+   - Celkový počet stránek
+   - Počet stránek s chybami/varováními/OK
+   - Průměrné délky title a description
+   - Počet duplicitních title/description
 
-Aplikace vytvoří Excel soubor se dvěma listy:
+2. **Detailní data**
+   - Kompletní tabulka se všemi SEO atributy pro každou stránku
+   - Barevné označení řádků podle statusu
 
-### 1. Přehled
-- Celkový počet stránek
-- Počet stránek s chybami/varováními/OK
-- Průměrné délky title a description
-- Počet duplicitních title/description
-- Top problémy (nejčastější chyby)
+## 🛠️ Technologie
 
-### 2. Detailní data
-Kompletní tabulka se všemi SEO atributy pro každou stránku:
-- URL
-- Title (s délkou a statusem)
-- Meta Description (s délkou a statusem)
-- H1
-- Open Graph tagy
-- Twitter Card tagy
-- Canonical URL
-- Robots meta tag
-- Informace o obrázcích (s/bez alt textu)
-- Strukturovaná data
-- Hreflang tagy
-- Schema.org markup
-- HTTPS status
-- Broken links count
-- Chybějící kritické prvky
-- Seznam všech problémů
-- Celkový status (error/warning/ok)
+- **Eleventy (11ty)**: Statický site generator
+- **TypeScript**: Typovaný JavaScript
+- **Tailwind CSS**: Utility-first CSS framework
+- **Netlify Functions**: Serverless funkce pro backend
+- **Cheerio**: HTML parsing (jako BeautifulSoup v Pythonu)
+- **ExcelJS**: Generování Excel souborů
+- **node-fetch**: HTTP klient
+- **xml2js**: Parsování XML sitemap
 
-Řádky jsou barevně označeny:
-- 🔴 Červeně: stránky s chybami
-- 🟡 Žlutě: stránky s varováními
-- 🟢 Zeleně: OK stránky
+## 📝 Jak to funguje
 
-## Jak to funguje
+1. **Frontend**: Eleventy generuje statické HTML stránky s Tailwind CSS
+2. **Formulář**: Uživatel zadá URL a parametry analýzy
+3. **Backend API**: Netlify Function `/api/analyze` provede:
+   - Nalezení sitemapy
+   - Parsování všech URL ze sitemapy
+   - Scrapování SEO atributů každé stránky
+   - Validaci broken links (volitelné)
+   - Detekci duplicit
+4. **Zobrazení výsledků**: Frontend zobrazí výsledky v tabulce
+5. **Export**: Netlify Function `/api/export` vygeneruje Excel soubor
 
-1. **Nalezení sitemapy**: Aplikace automaticky najde sitemapu webu (zkusí `/sitemap.xml`, `/sitemap_index.xml`, nebo najde v `robots.txt`)
+## ⚠️ Omezení
 
-2. **Parsování sitemapy**: Extrahuje všechny URL ze sitemapy (podporuje i sitemap indexy s více sitemapami)
+- **Netlify Functions timeout**: Maximálně 10 sekund pro synchronní funkce, 26 sekund pro background funkce. Pro dlouhé analýzy může být potřeba použít background funkce nebo rozdělit analýzu na více kroků.
+- **Velké weby**: Pro weby s více než 1000 stránkami může analýza trvat dlouho
+- **JavaScript weby**: Pokud web načítá obsah pomocí JavaScriptu (React, Vue, atd.), některé prvky jako H1 mohou být v HTML prázdné. Pro kompletní analýzu JavaScript webů by bylo potřeba použít headless browser.
 
-3. **Scrapování SEO atributů**: Pro každou URL stáhne HTML a extrahuje všechny SEO atributy
+## 🔒 Ochrana proti nechtěnému DDoS útoku
 
-4. **Validace**: Provede validace (délka title/description, chybějící prvky, canonical, alt texty, atd.)
-
-5. **Validace broken links** (volitelné): Ověří všechny odkazy a obrázky na stránce
-
-6. **Detekce duplicit**: Najde duplicitní title a description napříč všemi stránkami
-
-7. **Export do Excel**: Vytvoří Excel soubor s přehledovou stránkou a detailními daty
-
-## Požadavky
-
-- Python 3.7+
-- requests
-- beautifulsoup4
-- openpyxl
-- tqdm
-- lxml
-
-## Poznámky
-
-- Aplikace respektuje rate limiting (výchozí zpoždění 0.5s mezi requesty)
-- Pro velké weby může analýza trvat delší dobu
-- Validace broken links může být časově náročná - použijte `--skip-links` pro rychlejší analýzu
-- Aplikace automaticky zpracuje sitemap indexy (více sitemap v jednom)
-- **JavaScript weby**: Pokud web načítá obsah pomocí JavaScriptu (React, Vue, atd.), některé prvky jako H1 mohou být v HTML prázdné. Aplikace to detekuje a označí jako problém. Pro kompletní analýzu JavaScript webů by bylo potřeba použít headless browser (Selenium/Playwright).
-- **OG Description fallback**: Pokud stránka nemá OG description, aplikace automaticky použije meta description jako náhradní hodnotu
-
-## Ochrana proti nechtěnému DDoS útoku
-
-Aplikace obsahuje několik ochranných mechanismů, aby zabránila nechtěnému přetížení serveru:
-
+Aplikace obsahuje několik ochranných mechanismů:
 - ✅ **Rate limiting**: Zpoždění mezi requesty (výchozí 0.5s)
-- ✅ **Batch processing**: Link validace probíhá v batchích s rate limitingem
-- ✅ **Exponential backoff**: Při chybách se zvyšuje zpoždění mezi opakovanými pokusy
+- ✅ **Batch processing**: Link validace probíhá v batchích
 - ✅ **Omezení paralelních requestů**: Maximální počet paralelních workerů (výchozí 5)
 - ✅ **Cache**: Již ověřené URL se neověřují znovu
 - ✅ **Varování při velkém počtu URL**: Aplikace varuje při více než 1000 URL
 
-**Doporučení pro velké weby:**
-- Použijte `--limit` pro testování na menším vzorku
-- Použijte `--skip-links` pro rychlejší analýzu bez validace odkazů
-- Zvažte zvýšení `--delay` na 1.0 nebo více pro velmi citlivé servery
-- Sledujte výkon serveru během analýzy
+## 🐛 Troubleshooting
 
-## Licence
+### Chyba: "Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
+
+Tato chyba znamená, že API endpoint vrací HTML místo JSON. To se stane, když:
+- Netlify Functions nejsou zkompilované - spusťte `npm run build:functions`
+- Používáte jen Eleventy dev server místo `netlify dev` - použijte `npm run dev` (který spustí `netlify dev`)
+
+**Řešení**: Vždy používejte `npm run dev` pro vývoj, který automaticky zkompiluje funkce a spustí Netlify dev server.
+
+### Funkce se nespouštějí
+
+- Zkontrolujte, že TypeScript soubory jsou zkompilované do JavaScriptu (`netlify/functions/**/*.js` existují)
+- Ověřte, že `netlify.toml` má správně nastavenou `functions` directory
+- Zkontrolujte Netlify logs v terminálu nebo dashboardu
+
+### CSS se nenačítá
+
+- Ověřte, že Tailwind CSS je zkompilován (`src/css/styles.css` nebo `_site/css/styles.css` existuje)
+- Zkontrolujte, že Eleventy kopíruje CSS soubor (`addPassthroughCopy` v `.eleventy.js`)
+
+## 📄 Licence
 
 Tento projekt je poskytován "tak jak je" bez záruky.

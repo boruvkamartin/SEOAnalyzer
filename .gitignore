@@ -1,25 +1,12 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Virtual Environment
-venv/
-env/
-ENV/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Output files
-*.xlsx
-*.xls
-
-# OS
+node_modules/
+_site/
+dist/
+.env
+.env.local
 .DS_Store
-Thumbs.db
+*.log
+netlify/functions/**/*.js
+!.gitkeep
+
+# Local Netlify folder
+.netlify

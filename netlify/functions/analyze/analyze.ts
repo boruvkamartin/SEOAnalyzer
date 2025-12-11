@@ -1,0 +1,220 @@
+import { Handler } from '@netlify/functions';
+import { SitemapParser } from '../utils/sitemapParser';
+import { SEOScraper } from '../utils/seoScraper';
+import { LinkValidator } from '../utils/linkValidator';
+
+interface AnalyzeRequest {
+  url: string;
+  timeout?: number;
+  delay?: number;
+  limit?: number;
+  skipLinks?: boolean;
+}
+
+interface AnalyzeResponse {
+  results: any[];
+  duplicateTitles: string[];
+  duplicateDescriptions: string[];
+}
+
+const detectDuplicates = (results: any[]): { titles: string[]; descriptions: string[] } => {
+  const titles: string[] = [];
+  const descriptions: string[] = [];
+
+  results.forEach(result => {
+    if (result.title) titles.push(result.title);
+    if (result.meta_description) descriptions.push(result.meta_description);
+  });
+
+  const titleCounts = new Map<string, number>();
+  const descCounts = new Map<string, number>();
+
+  titles.forEach(title => {
+    titleCounts.set(title, (titleCounts.get(title) || 0) + 1);
+  });
+
+  descriptions.forEach(desc => {
+    descCounts.set(desc, (descCounts.get(desc) || 0) + 1);
+  });
+
+  const duplicateTitles = Array.from(titleCounts.entries())
+    .filter(([_, count]) => count > 1)
+    .map(([title]) => title);
+
+  const duplicateDescriptions = Array.from(descCounts.entries())
+    .filter(([_, count]) => count > 1)
+    .map(([desc]) => desc);
+
+  return { titles: duplicateTitles, descriptions: duplicateDescriptions };
+};
+
+const addDuplicateWarnings = (
+  results: any[],
+  duplicateTitles: string[],
+  duplicateDescriptions: string[]
+): void => {
+  results.forEach(result => {
+    if (result.title && duplicateTitles.includes(result.title)) {
+      result.issues.push(`Duplicitní title: "${result.title}"`);
+      if (result.status === 'ok') {
+        result.status = 'warning';
+      }
+    }
+
+    if (result.meta_description && duplicateDescriptions.includes(result.meta_description)) {
+      result.issues.push(`Duplicitní description: "${result.meta_description}"`);
+      if (result.status === 'ok') {
+        result.status = 'warning';
+      }
+    }
+  });
+};
+
+export const handler: Handler = async (event, context) => {
+  // CORS headers
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      }
+    };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ message: 'Method not allowed' })
+    };
+  }
+
+  try {
+    const body: AnalyzeRequest = JSON.parse(event.body || '{}');
+
+    if (!body.url) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ message: 'URL je povinná' })
+      };
+    }
+
+    const url = body.url.replace(/\/$/, '');
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ message: 'URL musí začínat http:// nebo https://' })
+      };
+    }
+
+    const timeout = body.timeout || 10;
+    const delay = body.delay || 0.5;
+    const limit = body.limit || null;
+    const skipLinks = body.skipLinks || false;
+
+    // Step 1: Find and parse sitemap
+    const sitemapParser = new SitemapParser(url, { timeout: timeout * 1000 });
+    let urls = await sitemapParser.getAllUrls();
+
+    if (urls.length === 0) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ message: 'V sitemapě nebyly nalezeny žádné URL' })
+      };
+    }
+
+    if (limit && limit > 0) {
+      urls = urls.slice(0, limit);
+    }
+
+    // Step 2: Scrape SEO attributes
+    const seoScraper = new SEOScraper({
+      timeout: timeout * 1000,
+      delay: delay * 1000
+    });
+
+    const results: any[] = [];
+    for (const urlItem of urls) {
+      const result = await seoScraper.scrapeUrl(urlItem);
+      results.push(result);
+    }
+
+    // Step 3: Validate broken links (optional)
+    if (!skipLinks) {
+      const linkValidator = new LinkValidator({
+        timeout: timeout * 1000,
+        maxWorkers: 5,
+        delay: Math.min(delay * 1000, 100)
+      });
+
+      for (const result of results) {
+        if (result.error) continue;
+
+        const page = await seoScraper.fetchPage(result.url);
+        if (page) {
+          const linkValidation = await linkValidator.validatePageLinks(page.html, result.url);
+
+          result.broken_links_count = linkValidation.total_broken;
+          result.broken_links_detail = {
+            broken_links: linkValidation.broken_links,
+            broken_images: linkValidation.broken_images
+          };
+
+          if (linkValidation.total_broken > 0) {
+            result.issues.push(`${linkValidation.total_broken} broken links/obrázků`);
+            if (result.status === 'ok') {
+              result.status = 'warning';
+            }
+            if (linkValidation.total_broken > 5) {
+              result.status = 'error';
+            }
+          }
+        }
+      }
+    } else {
+      results.forEach(result => {
+        result.broken_links_count = 0;
+      });
+    }
+
+    // Step 4: Detect duplicates
+    const { titles: duplicateTitles, descriptions: duplicateDescriptions } = detectDuplicates(results);
+    addDuplicateWarnings(results, duplicateTitles, duplicateDescriptions);
+
+    const response: AnalyzeResponse = {
+      results,
+      duplicateTitles,
+      duplicateDescriptions
+    };
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(response)
+    };
+  } catch (error: any) {
+    console.error('Error in analyze function:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        message: error.message || 'Chyba při analýze',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      })
+    };
+  }
+};
+
