@@ -136,9 +136,21 @@ function displayResults(data) {
     ` : ''}
   `;
   
-  // Display table
+  // Display table - only show pages with issues (errors or warnings)
   tableBody.innerHTML = '';
-  data.results.forEach(result => {
+  const resultsWithIssues = data.results.filter(result => result.status !== 'ok');
+  
+  if (resultsWithIssues.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+          <p class="text-lg font-semibold">Všechny stránky jsou v pořádku! 🎉</p>
+          <p class="text-sm mt-2">Nebyly nalezeny žádné chyby ani varování.</p>
+        </td>
+      </tr>
+    `;
+  } else {
+    resultsWithIssues.forEach(result => {
     const row = document.createElement('tr');
     const statusClass = result.status === 'error' ? 'status-error' : 
                        result.status === 'warning' ? 'status-warning' : 
@@ -176,9 +188,10 @@ function displayResults(data) {
           '<span class="text-gray-400">Žádné</span>'}
       </td>
     `;
-    
-    tableBody.appendChild(row);
-  });
+      
+      tableBody.appendChild(row);
+    });
+  }
   
   results.classList.remove('hidden');
 }
