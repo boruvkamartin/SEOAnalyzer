@@ -153,8 +153,13 @@ Excel soubor obsahuje dva listy:
 
 ## ⚠️ Omezení
 
-- **Netlify Functions timeout**: Maximálně 10 sekund pro synchronní funkce, 26 sekund pro background funkce. Pro dlouhé analýzy může být potřeba použít background funkce nebo rozdělit analýzu na více kroků.
-- **Velké weby**: Pro weby s více než 1000 stránkami může analýza trvat dlouho
+- **Netlify Functions timeout**: 
+  - **Free tier**: Maximálně 10 sekund pro synchronní funkce
+  - **Pro tier**: Maximálně 26 sekund pro synchronní funkce
+  - **Lokální vývoj**: 30 sekund (výchozí)
+  - Pro dlouhé analýzy použijte **limit stránek** nebo **přeskočte validaci broken links**
+  - Pro velmi velké weby zvažte rozdělení analýzy na více kroků
+- **Velké weby**: Pro weby s více než 100 stránkami doporučujeme použít limit nebo přeskočit validaci broken links
 - **JavaScript weby**: Pokud web načítá obsah pomocí JavaScriptu (React, Vue, atd.), některé prvky jako H1 mohou být v HTML prázdné. Pro kompletní analýzu JavaScript webů by bylo potřeba použít headless browser.
 
 ## 🔒 Ochrana proti nechtěnému DDoS útoku

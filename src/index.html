@@ -3,12 +3,26 @@ layout: base.njk
 title: Hlavní stránka
 ---
 
-<div class="bg-white rounded-lg shadow-md p-6 mb-6">
-  <h2 class="text-xl font-semibold mb-4">Analyzovat web</h2>
-  <form id="analyzeForm" class="space-y-4">
+<div class="card p-8 mb-6 border border-dark-border/50">
+  <div class="flex items-center space-x-3 mb-6">
+    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+      </svg>
+    </div>
     <div>
-      <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
-        URL webu k analýze
+      <h2 class="text-2xl font-bold text-dark-text">Analyzovat web</h2>
+      <p class="text-sm text-dark-text-muted">Zadejte URL a spusťte komplexní SEO analýzu</p>
+    </div>
+  </div>
+  
+  <form id="analyzeForm" class="space-y-6">
+    <div>
+      <label for="url" class="block text-sm font-semibold text-dark-text mb-2">
+        <span class="flex items-center space-x-2">
+          <span>URL webu k analýze</span>
+          <span class="text-red-400">*</span>
+        </span>
       </label>
       <input 
         type="url" 
@@ -16,14 +30,19 @@ title: Hlavní stránka
         name="url" 
         required
         placeholder="https://www.example.com"
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        class="input-field"
       >
-      <p class="mt-1 text-sm text-gray-500">Zadejte URL webu (např. https://www.dmpagency.cz/)</p>
+      <p class="mt-2 text-sm text-dark-text-muted flex items-center space-x-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>Zadejte URL webu (např. https://www.dmpagency.cz/)</span>
+      </p>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
-        <label for="timeout" class="block text-sm font-medium text-gray-700 mb-2">
+        <label for="timeout" class="block text-sm font-semibold text-dark-text mb-2">
           Timeout (s)
         </label>
         <input 
@@ -33,12 +52,12 @@ title: Hlavní stránka
           value="10"
           min="5"
           max="30"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          class="input-field"
         >
       </div>
       
       <div>
-        <label for="delay" class="block text-sm font-medium text-gray-700 mb-2">
+        <label for="delay" class="block text-sm font-semibold text-dark-text mb-2">
           Delay (s)
         </label>
         <input 
@@ -49,12 +68,12 @@ title: Hlavní stránka
           min="0.1"
           max="2"
           step="0.1"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          class="input-field"
         >
       </div>
       
       <div>
-        <label for="limit" class="block text-sm font-medium text-gray-700 mb-2">
+        <label for="limit" class="block text-sm font-semibold text-dark-text mb-2">
           Limit stránek (volitelné)
         </label>
         <input 
@@ -63,65 +82,73 @@ title: Hlavní stránka
           name="limit" 
           min="1"
           placeholder="Všechny"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          class="input-field"
         >
       </div>
     </div>
     
-    <div class="flex items-center">
+    <div class="flex items-center space-x-3 p-4 bg-dark-surface/50 rounded-xl border border-dark-border/30">
       <input 
         type="checkbox" 
         id="skipLinks" 
         name="skipLinks"
-        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        class="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-dark-border rounded bg-dark-surface"
       >
-      <label for="skipLinks" class="ml-2 block text-sm text-gray-700">
+      <label for="skipLinks" class="text-sm text-dark-text cursor-pointer">
         Přeskočit validaci broken links (rychlejší analýza)
       </label>
     </div>
     
     <button 
       type="submit" 
-      class="btn-primary w-full md:w-auto"
+      class="btn-primary w-full md:w-auto flex items-center space-x-2"
       id="analyzeBtn"
     >
-      Spustit analýzu
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+      </svg>
+      <span>Spustit analýzu</span>
     </button>
   </form>
 </div>
 
 <!-- Loading indicator -->
-<div id="loading" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
-  <div class="flex items-center space-x-4">
-    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+<div id="loading" class="hidden card p-8 mb-6 border border-dark-border/50">
+  <div class="flex items-center space-x-4 mb-6">
+    <div class="relative">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-dark-border border-t-indigo-500"></div>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="w-6 h-6 bg-indigo-500 rounded-full animate-pulse"></div>
+      </div>
+    </div>
     <div class="flex-1">
-      <p class="font-semibold text-gray-900" id="loadingText">Probíhá analýza...</p>
-      <p class="text-sm text-gray-600" id="loadingSubtext">Inicializace...</p>
+      <p class="font-semibold text-dark-text text-lg" id="loadingText">Probíhá analýza...</p>
+      <p class="text-sm text-dark-text-muted" id="loadingSubtext">Inicializace...</p>
     </div>
     <button id="cancelBtn" class="btn-secondary text-sm hidden">Zrušit</button>
   </div>
   <div class="mt-4">
-    <div class="w-full bg-gray-200 rounded-full h-2">
-      <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+    <div class="w-full bg-dark-surface rounded-full h-3 overflow-hidden">
+      <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-300 shadow-lg" style="width: 0%"></div>
     </div>
-    <p class="text-xs text-gray-500 mt-1 text-center" id="progressText">0%</p>
+    <p class="text-xs text-dark-text-muted mt-2 text-center font-semibold" id="progressText">0%</p>
   </div>
 </div>
 
 <!-- Results -->
 <div id="results" class="hidden">
   <!-- Dashboard/Statistics -->
-  <div id="dashboard" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
+  <div id="dashboard" class="card p-8 mb-6 border border-dark-border/50"></div>
   
   <!-- Summary -->
-  <div id="summary" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
+  <div id="summary" class="card p-8 mb-6 border border-dark-border/50"></div>
   
   <!-- Filters and sorting -->
-  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+  <div class="card p-6 mb-6 border border-dark-border/50">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Filtr podle statusu</label>
-        <select id="statusFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+        <label class="block text-sm font-semibold text-dark-text mb-2">Filtr podle statusu</label>
+        <select id="statusFilter" class="input-field">
           <option value="all">Všechny</option>
           <option value="error">Jen chyby</option>
           <option value="warning">Jen varování</option>
@@ -129,8 +156,8 @@ title: Hlavní stránka
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Řazení</label>
-        <select id="sortBy" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+        <label class="block text-sm font-semibold text-dark-text mb-2">Řazení</label>
+        <select id="sortBy" class="input-field">
           <option value="status">Podle statusu</option>
           <option value="score">Podle SEO skóre</option>
           <option value="url">Podle URL</option>
@@ -139,68 +166,68 @@ title: Hlavní stránka
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Vyhledávání</label>
+        <label class="block text-sm font-semibold text-dark-text mb-2">Vyhledávání</label>
         <input 
           type="text" 
           id="searchInput" 
           placeholder="Hledat v URL nebo title..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          class="input-field"
         >
       </div>
     </div>
-    <div class="flex justify-between items-center">
-      <p class="text-sm text-gray-600" id="resultsCount">Zobrazeno 0 výsledků</p>
-      <button id="exportBtn" class="btn-secondary">
-        📥 Exportovat do Excelu
+    <div class="flex justify-between items-center pt-4 border-t border-dark-border/30">
+      <p class="text-sm text-dark-text-muted" id="resultsCount">Zobrazeno 0 výsledků</p>
+      <button id="exportBtn" class="btn-secondary flex items-center space-x-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <span>Exportovat do Excelu</span>
       </button>
     </div>
   </div>
   
   <!-- Results table -->
-  <div class="bg-white rounded-lg shadow-md overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-900">Stránky s problémy</h3>
-      <p class="text-sm text-gray-600 mt-1">Zobrazují se pouze stránky s chybami nebo varováními. OK stránky jsou skryté.</p>
+  <div class="card overflow-hidden border border-dark-border/50">
+    <div class="px-6 py-5 border-b border-dark-border/30 bg-dark-surface/30">
+      <h3 class="text-lg font-semibold text-dark-text">Stránky s problémy</h3>
+      <p class="text-sm text-dark-text-muted mt-1">Zobrazují se pouze stránky s chybami nebo varováními. OK stránky jsou skryté.</p>
     </div>
     <div class="overflow-x-auto">
-      <table id="resultsTable" class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+      <table id="resultsTable" class="min-w-full divide-y divide-dark-border/30">
+        <thead class="bg-dark-surface/50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="status">
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-dark-surface-hover transition-colors" data-sort="status">
               Status <span class="sort-indicator"></span>
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="url">
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-dark-surface-hover transition-colors" data-sort="url">
               URL <span class="sort-indicator"></span>
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">H1</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="score">
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider">Title</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider">Description</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider">H1</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-dark-surface-hover transition-colors" data-sort="score">
               SEO Skóre <span class="sort-indicator"></span>
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Problémy</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akce</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider">Problémy</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-dark-text-muted uppercase tracking-wider">Akce</th>
           </tr>
         </thead>
-        <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-200">
+        <tbody id="resultsTableBody" class="bg-dark-surface/20 divide-y divide-dark-border/20">
         </tbody>
       </table>
     </div>
   </div>
   
   <!-- Detail Modal -->
-  <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <h3 class="text-xl font-semibold text-gray-900" id="modalTitle">Detail stránky</h3>
-        <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+  <div id="detailModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="card max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-indigo-500/30 shadow-2xl">
+      <div class="sticky top-0 glass border-b border-dark-border/30 px-6 py-5 flex justify-between items-center z-10">
+        <h3 class="text-xl font-bold gradient-text" id="modalTitle">Detail stránky</h3>
+        <button id="closeModal" class="text-dark-text-muted hover:text-dark-text text-3xl font-light transition-colors">&times;</button>
       </div>
       <div class="p-6" id="modalContent">
         <!-- Content will be inserted here -->
       </div>
     </div>
   </div>
-    </div>
-  </div>
 </div>
-

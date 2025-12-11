@@ -16,6 +16,12 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  
+# Note: Netlify Functions timeout limits:
+# - Free tier: 10 seconds (synchronous), 15 minutes (background)
+# - Pro tier: 26 seconds (synchronous), 15 minutes (background)
+# For local development with netlify dev, timeout is 30 seconds by default
+# To increase timeout locally, you may need to use background functions or split the analysis
 
 [[redirects]]
   from = "/api/*"

@@ -23,6 +23,39 @@ function getScoreTextColor(score) {
   return 'text-red-500';
 }
 
+function showErrorToast(message) {
+  // Vytvořit toast notification
+  const toast = document.createElement('div');
+  toast.className = 'fixed top-4 right-4 glass p-4 rounded-xl border border-red-500/30 bg-red-500/10 shadow-2xl z-50 max-w-md animate-slide-in';
+  toast.innerHTML = `
+    <div class="flex items-start space-x-3">
+      <div class="flex-shrink-0">
+        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-red-400 mb-1">Chyba</p>
+        <p class="text-sm text-dark-text">${message}</p>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" class="text-dark-text-muted hover:text-dark-text transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Automaticky odstranit po 8 sekundách
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 8000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('analyzeForm');
   const loading = document.getElementById('loading');
@@ -73,12 +106,42 @@ document.addEventListener('DOMContentLoaded', () => {
         signal: abortController.signal
       });
       
+      // Přečíst response jako text (můžeme pak parsovat jako JSON nebo použít jako text)
+      const responseText = await response.text();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Chyba při analýze');
+        let errorMessage = 'Chyba při analýze';
+        try {
+          // Zkusit parsovat jako JSON
+          const error = JSON.parse(responseText);
+          errorMessage = error.message || errorMessage;
+        } catch (e) {
+          // Pokud není JSON, použít text přímo
+          if (responseText && (responseText.includes('timeout') || responseText.includes('Timeout') || responseText.includes('timed out'))) {
+            errorMessage = 'Analýza trvala příliš dlouho a byla přerušena. Zkuste snížit počet stránek pomocí limitu nebo přeskočit validaci broken links.';
+          } else if (responseText) {
+            errorMessage = responseText.substring(0, 200);
+          } else {
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
+      // Parsovat úspěšnou odpověď
+      let data;
+      try {
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('Prázdná odpověď ze serveru');
+        }
+        data = JSON.parse(responseText);
+      } catch (e) {
+        // Pokud response není validní JSON
+        if (responseText && (responseText.includes('timeout') || responseText.includes('Timeout'))) {
+          throw new Error('Analýza trvala příliš dlouho a byla přerušena. Zkuste snížit počet stránek pomocí limitu nebo přeskočit validaci broken links.');
+        }
+        throw new Error('Neplatná odpověď ze serveru. Zkuste to znovu nebo snižte počet analyzovaných stránek.');
+      }
       analysisData = data;
       
       updateProgress(100, 'Dokončeno!');
@@ -90,8 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error.name === 'AbortError') {
         updateProgress(0, 'Analýza byla zrušena');
       } else {
-        alert('Chyba: ' + error.message);
-        console.error(error);
+        // Zobrazit uživatelsky přívětivou chybovou hlášku
+        const errorMessage = error.message || 'Neznámá chyba';
+        updateProgress(0, 'Chyba při analýze');
+        
+        // Vytvořit moderní error toast místo alert
+        showErrorToast(errorMessage);
+        console.error('Analysis error:', error);
       }
     } finally {
       loading.classList.add('hidden');
@@ -241,8 +309,8 @@ function renderTable(results) {
   if (results.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-          <p class="text-lg font-semibold">Žádné výsledky</p>
+        <td colspan="8" class="px-6 py-8 text-center text-dark-text-muted">
+          <p class="text-lg font-semibold text-dark-text">Žádné výsledky</p>
           <p class="text-sm mt-2">Zkuste změnit filtry nebo vyhledávání.</p>
         </td>
       </tr>
@@ -256,9 +324,9 @@ function renderTable(results) {
                        result.status === 'warning' ? 'status-warning' : 
                        'status-ok';
     
-    row.className = result.status === 'error' ? 'bg-red-50 hover:bg-red-100' : 
-                   result.status === 'warning' ? 'bg-yellow-50 hover:bg-yellow-100' : 
-                   'bg-green-50 hover:bg-green-100';
+    row.className = result.status === 'error' ? 'bg-red-500/10 hover:bg-red-500/20 border-l-4 border-red-500' : 
+                   result.status === 'warning' ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-l-4 border-yellow-500' : 
+                   'bg-green-500/10 hover:bg-green-500/20 border-l-4 border-green-500';
     row.dataset.index = index;
     
     row.innerHTML = `
@@ -273,15 +341,15 @@ function renderTable(results) {
         </a>
       </td>
       <td class="px-6 py-4 text-sm">
-        ${result.title || '<span class="text-gray-400">Chybí</span>'}
-        ${result.title ? `<br><span class="text-xs text-gray-500">${result.title.length} znaků</span>` : ''}
+        ${result.title || '<span class="text-dark-text-muted">Chybí</span>'}
+        ${result.title ? `<br><span class="text-xs text-dark-text-muted">${result.title.length} znaků</span>` : ''}
       </td>
-      <td class="px-6 py-4 text-sm">
-        ${result.meta_description || '<span class="text-gray-400">Chybí</span>'}
-        ${result.meta_description ? `<br><span class="text-xs text-gray-500">${result.meta_description.length} znaků</span>` : ''}
+      <td class="px-6 py-4 text-sm text-dark-text">
+        ${result.meta_description || '<span class="text-dark-text-muted">Chybí</span>'}
+        ${result.meta_description ? `<br><span class="text-xs text-dark-text-muted">${result.meta_description.length} znaků</span>` : ''}
       </td>
-      <td class="px-6 py-4 text-sm">
-        ${result.h1 || '<span class="text-gray-400">Chybí</span>'}
+      <td class="px-6 py-4 text-sm text-dark-text">
+        ${result.h1 || '<span class="text-dark-text-muted">Chybí</span>'}
       </td>
       <td class="px-6 py-4 whitespace-nowrap">
         ${result.seo_score ? `
@@ -290,22 +358,22 @@ function renderTable(results) {
               <div class="w-16 h-16 rounded-full ${getScoreColor(result.seo_score.score)} flex items-center justify-center">
                 <span class="text-lg font-bold text-white">${result.seo_score.score}</span>
               </div>
-              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center border-2 ${getScoreColor(result.seo_score.score)}">
-                <span class="text-xs font-bold ${getScoreTextColor(result.seo_score.score)}">${result.seo_score.grade}</span>
+              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-dark-surface border-2 ${getScoreColor(result.seo_score.score)} flex items-center justify-center shadow-lg">
+                <span class="text-xs font-bold text-white">${result.seo_score.grade}</span>
               </div>
             </div>
           </div>
-        ` : '<span class="text-gray-400">-</span>'}
+        ` : '<span class="text-dark-text-muted">-</span>'}
       </td>
       <td class="px-6 py-4 text-sm">
         ${result.issues && result.issues.length > 0 ? 
           `<ul class="list-disc list-inside text-xs">${result.issues.slice(0, 3).map(issue => `<li>${issue}</li>`).join('')}</ul>
-           ${result.issues.length > 3 ? `<span class="text-xs text-gray-500">+${result.issues.length - 3} dalších</span>` : ''}` : 
-          '<span class="text-gray-400">Žádné</span>'}
+           ${result.issues.length > 3 ? `<span class="text-xs text-dark-text-muted">+${result.issues.length - 3} dalších</span>` : ''}` : 
+          '<span class="text-dark-text-muted">Žádné</span>'}
       </td>
       <td class="px-6 py-4 whitespace-nowrap">
         <button 
-          class="text-blue-600 hover:text-blue-800 text-sm font-medium detail-btn"
+          class="text-indigo-400 hover:text-indigo-300 text-sm font-medium detail-btn transition-colors"
           data-index="${index}"
         >
           Detail
@@ -336,28 +404,36 @@ function showDetail(result) {
     <div class="space-y-6">
       <!-- SEO Score -->
       ${result.seo_score ? `
-      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-200">
+      <div class="glass p-6 rounded-xl border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
         <div class="flex items-center justify-between">
           <div>
-            <h4 class="text-lg font-semibold text-gray-900 mb-2">SEO Skóre</h4>
-            <div class="flex items-center space-x-4">
+            <h4 class="text-lg font-semibold text-dark-text mb-4 gradient-text">SEO Skóre</h4>
+            <div class="flex items-center space-x-6">
               <div class="relative">
-                <div class="w-24 h-24 rounded-full ${getScoreColor(result.seo_score.score)} flex items-center justify-center shadow-lg">
+                <div class="w-24 h-24 rounded-full ${getScoreColor(result.seo_score.score)} flex items-center justify-center shadow-2xl">
                   <span class="text-3xl font-bold text-white">${result.seo_score.score}</span>
                 </div>
-                <div class="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-white flex items-center justify-center border-4 ${getScoreColor(result.seo_score.score)} shadow-md">
-                  <span class="text-lg font-bold ${getScoreTextColor(result.seo_score.score)}">${result.seo_score.grade}</span>
+                <div class="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-dark-surface border-4 ${getScoreColor(result.seo_score.score)} flex items-center justify-center shadow-lg">
+                  <span class="text-lg font-bold text-white">${result.seo_score.grade}</span>
                 </div>
               </div>
-              <div>
-                <p class="text-sm text-gray-600">Základní SEO</p>
-                <p class="text-lg font-semibold">${result.seo_score.breakdown.basic}/100</p>
-                <p class="text-sm text-gray-600 mt-2">Obsah</p>
-                <p class="text-lg font-semibold">${result.seo_score.breakdown.content}/100</p>
-                <p class="text-sm text-gray-600 mt-2">Technické</p>
-                <p class="text-lg font-semibold">${result.seo_score.breakdown.technical}/100</p>
-                <p class="text-sm text-gray-600 mt-2">Performance</p>
-                <p class="text-lg font-semibold">${result.seo_score.breakdown.performance}/100</p>
+              <div class="space-y-2">
+                <div>
+                  <p class="text-sm text-dark-text-muted">Základní SEO</p>
+                  <p class="text-lg font-semibold text-dark-text">${result.seo_score.breakdown.basic}/100</p>
+                </div>
+                <div>
+                  <p class="text-sm text-dark-text-muted">Obsah</p>
+                  <p class="text-lg font-semibold text-dark-text">${result.seo_score.breakdown.content}/100</p>
+                </div>
+                <div>
+                  <p class="text-sm text-dark-text-muted">Technické</p>
+                  <p class="text-lg font-semibold text-dark-text">${result.seo_score.breakdown.technical}/100</p>
+                </div>
+                <div>
+                  <p class="text-sm text-dark-text-muted">Performance</p>
+                  <p class="text-lg font-semibold text-dark-text">${result.seo_score.breakdown.performance}/100</p>
+                </div>
               </div>
             </div>
           </div>
@@ -371,18 +447,18 @@ function showDetail(result) {
         <h4 class="text-lg font-semibold mb-3">Doporučení (${result.seo_score.recommendations.length})</h4>
         <div class="space-y-3">
           ${result.seo_score.recommendations.map(rec => `
-            <div class="border-l-4 ${rec.priority === 'high' ? 'border-red-500' : rec.priority === 'medium' ? 'border-yellow-500' : 'border-blue-500'} bg-gray-50 p-4 rounded">
+            <div class="border-l-4 ${rec.priority === 'high' ? 'border-red-500' : rec.priority === 'medium' ? 'border-yellow-500' : 'border-indigo-500'} glass p-4 rounded-xl">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
-                  <div class="flex items-center space-x-2 mb-1">
-                    <span class="px-2 py-1 text-xs font-semibold rounded ${rec.priority === 'high' ? 'bg-red-100 text-red-800' : rec.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <span class="px-3 py-1 text-xs font-semibold rounded-lg ${rec.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : rec.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'}">
                       ${rec.priority === 'high' ? 'Vysoká' : rec.priority === 'medium' ? 'Střední' : 'Nízká'} priorita
                     </span>
-                    <span class="text-xs text-gray-500">${rec.category}</span>
+                    <span class="text-xs text-dark-text-muted">${rec.category}</span>
                   </div>
-                  <p class="font-semibold text-gray-900 mb-1">${rec.issue}</p>
-                  <p class="text-sm text-gray-700 mb-1">${rec.recommendation}</p>
-                  <p class="text-xs text-gray-500">Dopad: ${rec.impact}</p>
+                  <p class="font-semibold text-dark-text mb-1">${rec.issue}</p>
+                  <p class="text-sm text-dark-text mb-1">${rec.recommendation}</p>
+                  <p class="text-xs text-dark-text-muted">Dopad: ${rec.impact}</p>
                 </div>
               </div>
             </div>
@@ -393,28 +469,28 @@ function showDetail(result) {
       
       <!-- Basic Info -->
       <div>
-        <h4 class="text-lg font-semibold mb-3">Základní informace</h4>
+        <h4 class="text-lg font-semibold mb-3 text-dark-text">Základní informace</h4>
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <p class="text-sm text-gray-600">Status</p>
-            <p class="font-semibold ${result.status === 'error' ? 'text-red-600' : result.status === 'warning' ? 'text-yellow-600' : 'text-green-600'}">
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Status</p>
+            <p class="font-semibold ${result.status === 'error' ? 'text-red-400' : result.status === 'warning' ? 'text-yellow-400' : 'text-green-400'}">
               ${result.status === 'error' ? 'Chyba' : result.status === 'warning' ? 'Varování' : 'OK'}
             </p>
           </div>
-          <div>
-            <p class="text-sm text-gray-600">HTTPS</p>
-            <p class="font-semibold">${result.https ? 'Ano' : 'Ne'}</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">HTTPS</p>
+            <p class="font-semibold text-dark-text">${result.https ? 'Ano' : 'Ne'}</p>
           </div>
           ${result.page_size ? `
-          <div>
-            <p class="text-sm text-gray-600">Velikost stránky</p>
-            <p class="font-semibold">${(result.page_size / 1024).toFixed(2)} KB</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Velikost stránky</p>
+            <p class="font-semibold text-dark-text">${(result.page_size / 1024).toFixed(2)} KB</p>
           </div>
           ` : ''}
           ${result.mobile_friendly !== undefined ? `
-          <div>
-            <p class="text-sm text-gray-600">Mobile-friendly</p>
-            <p class="font-semibold">${result.mobile_friendly ? 'Ano' : 'Ne'}</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Mobile-friendly</p>
+            <p class="font-semibold text-dark-text">${result.mobile_friendly ? 'Ano' : 'Ne'}</p>
           </div>
           ` : ''}
         </div>
@@ -422,26 +498,26 @@ function showDetail(result) {
       
       <!-- SEO Elements -->
       <div>
-        <h4 class="text-lg font-semibold mb-3">SEO prvky</h4>
-        <div class="space-y-2">
-          <div>
-            <p class="text-sm text-gray-600">Title</p>
-            <p class="font-semibold">${result.title || '<span class="text-gray-400">Chybí</span>'}</p>
-            ${result.title ? `<p class="text-xs text-gray-500">${result.title.length} znaků</p>` : ''}
+        <h4 class="text-lg font-semibold mb-3 text-dark-text">SEO prvky</h4>
+        <div class="space-y-3">
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Title</p>
+            <p class="font-semibold text-dark-text">${result.title || '<span class="text-dark-text-muted">Chybí</span>'}</p>
+            ${result.title ? `<p class="text-xs text-dark-text-muted mt-1">${result.title.length} znaků</p>` : ''}
           </div>
-          <div>
-            <p class="text-sm text-gray-600">Meta Description</p>
-            <p class="font-semibold">${result.meta_description || '<span class="text-gray-400">Chybí</span>'}</p>
-            ${result.meta_description ? `<p class="text-xs text-gray-500">${result.meta_description.length} znaků</p>` : ''}
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Meta Description</p>
+            <p class="font-semibold text-dark-text">${result.meta_description || '<span class="text-dark-text-muted">Chybí</span>'}</p>
+            ${result.meta_description ? `<p class="text-xs text-dark-text-muted mt-1">${result.meta_description.length} znaků</p>` : ''}
           </div>
-          <div>
-            <p class="text-sm text-gray-600">H1</p>
-            <p class="font-semibold">${result.h1 || '<span class="text-gray-400">Chybí</span>'}</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">H1</p>
+            <p class="font-semibold text-dark-text">${result.h1 || '<span class="text-dark-text-muted">Chybí</span>'}</p>
           </div>
           ${result.canonical ? `
-          <div>
-            <p class="text-sm text-gray-600">Canonical URL</p>
-            <p class="font-semibold"><a href="${result.canonical}" target="_blank" class="text-blue-600 hover:underline">${result.canonical}</a></p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Canonical URL</p>
+            <p class="font-semibold"><a href="${result.canonical}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition-colors">${result.canonical}</a></p>
           </div>
           ` : ''}
         </div>
@@ -449,29 +525,31 @@ function showDetail(result) {
       
       <!-- Issues -->
       <div>
-        <h4 class="text-lg font-semibold mb-3">Problémy (${result.issues?.length || 0})</h4>
+        <h4 class="text-lg font-semibold mb-3 text-dark-text">Problémy (${result.issues?.length || 0})</h4>
         ${result.issues && result.issues.length > 0 ? `
-          <ul class="list-disc list-inside space-y-1">
-            ${result.issues.map(issue => `<li class="text-sm">${issue}</li>`).join('')}
-          </ul>
-        ` : '<p class="text-sm text-gray-500">Žádné problémy</p>'}
+          <div class="glass p-4 rounded-xl">
+            <ul class="list-disc list-inside space-y-2">
+              ${result.issues.map(issue => `<li class="text-sm text-dark-text">${issue}</li>`).join('')}
+            </ul>
+          </div>
+        ` : '<p class="text-sm text-dark-text-muted">Žádné problémy</p>'}
       </div>
       
       <!-- Extended Metrics -->
       ${result.external_links_count !== undefined || result.internal_links_count !== undefined ? `
       <div>
-        <h4 class="text-lg font-semibold mb-3">Odkazy</h4>
+        <h4 class="text-lg font-semibold mb-3 text-dark-text">Odkazy</h4>
         <div class="grid grid-cols-2 gap-4">
           ${result.external_links_count !== undefined ? `
-          <div>
-            <p class="text-sm text-gray-600">Externí odkazy</p>
-            <p class="font-semibold text-xl">${result.external_links_count}</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Externí odkazy</p>
+            <p class="font-semibold text-xl text-dark-text">${result.external_links_count}</p>
           </div>
           ` : ''}
           ${result.internal_links_count !== undefined ? `
-          <div>
-            <p class="text-sm text-gray-600">Interní odkazy</p>
-            <p class="font-semibold text-xl">${result.internal_links_count}</p>
+          <div class="glass p-4 rounded-xl">
+            <p class="text-sm text-dark-text-muted mb-1">Interní odkazy</p>
+            <p class="font-semibold text-xl text-dark-text">${result.internal_links_count}</p>
           </div>
           ` : ''}
         </div>
@@ -484,12 +562,12 @@ function showDetail(result) {
         <h4 class="text-lg font-semibold mb-3">Strukturovaná data</h4>
         <div class="space-y-2">
           ${result.structured_data.map((sd, idx) => `
-            <div class="p-3 bg-gray-50 rounded">
-              <p class="font-semibold">${sd.type}</p>
+            <div class="glass p-4 rounded-xl">
+              <p class="font-semibold text-dark-text">${sd.type}</p>
               ${sd.valid === false ? `
-                <p class="text-sm text-red-600">Neplatné</p>
-                ${sd.errors ? `<ul class="text-xs text-red-600 mt-1">${sd.errors.map(e => `<li>${e}</li>`).join('')}</ul>` : ''}
-              ` : '<p class="text-sm text-green-600">Platné</p>'}
+                <p class="text-sm text-red-400 mt-1">Neplatné</p>
+                ${sd.errors ? `<ul class="text-xs text-red-400 mt-2 list-disc list-inside space-y-1">${sd.errors.map(e => `<li>${e}</li>`).join('')}</ul>` : ''}
+              ` : '<p class="text-sm text-green-400 mt-1">Platné</p>'}
             </div>
           `).join('')}
         </div>
@@ -506,17 +584,17 @@ function showDetail(result) {
             <p class="text-sm font-semibold mb-1">Broken odkazy:</p>
             <ul class="list-disc list-inside text-sm space-y-1">
               ${result.broken_links_detail.broken_links.slice(0, 10).map(link => `
-                <li><a href="${link.url}" target="_blank" class="text-blue-600 hover:underline">${link.url}</a> (${link.status || 'Error'})</li>
+                <li><a href="${link.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition-colors">${link.url}</a> <span class="text-dark-text-muted">(${link.status || 'Error'})</span></li>
               `).join('')}
             </ul>
           </div>
           ` : ''}
           ${result.broken_links_detail.broken_images && result.broken_links_detail.broken_images.length > 0 ? `
           <div>
-            <p class="text-sm font-semibold mb-1">Broken obrázky:</p>
+            <p class="text-sm font-semibold mb-2 text-dark-text">Broken obrázky:</p>
             <ul class="list-disc list-inside text-sm space-y-1">
               ${result.broken_links_detail.broken_images.slice(0, 10).map(img => `
-                <li><a href="${img.url}" target="_blank" class="text-blue-600 hover:underline">${img.url}</a> (${img.status || 'Error'})</li>
+                <li><a href="${img.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition-colors">${img.url}</a> <span class="text-dark-text-muted">(${img.status || 'Error'})</span></li>
               `).join('')}
             </ul>
           </div>
@@ -539,34 +617,34 @@ function displayResults(data) {
   if (data.statistics) {
     const stats = data.statistics;
     dashboard.innerHTML = `
-      <h2 class="text-xl font-semibold mb-4">📊 Dashboard a statistiky</h2>
+      <h2 class="text-2xl font-bold mb-6 gradient-text">📊 Dashboard a statistiky</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-blue-50 p-4 rounded-lg">
-          <p class="text-sm text-blue-600">Průměrná velikost stránky</p>
-          <p class="text-2xl font-bold text-blue-900">${stats.avgPageSize > 0 ? (stats.avgPageSize / 1024).toFixed(2) + ' KB' : 'N/A'}</p>
+        <div class="glass p-5 rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-transparent">
+          <p class="text-sm text-indigo-400 mb-2 font-semibold">Průměrná velikost stránky</p>
+          <p class="text-3xl font-bold text-dark-text">${stats.avgPageSize > 0 ? (stats.avgPageSize / 1024).toFixed(2) + ' KB' : 'N/A'}</p>
         </div>
-        <div class="bg-purple-50 p-4 rounded-lg">
-          <p class="text-sm text-purple-600">Celkem externích odkazů</p>
-          <p class="text-2xl font-bold text-purple-900">${stats.totalExternalLinks}</p>
+        <div class="glass p-5 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent">
+          <p class="text-sm text-purple-400 mb-2 font-semibold">Celkem externích odkazů</p>
+          <p class="text-3xl font-bold text-dark-text">${stats.totalExternalLinks}</p>
         </div>
-        <div class="bg-indigo-50 p-4 rounded-lg">
-          <p class="text-sm text-indigo-600">Celkem interních odkazů</p>
-          <p class="text-2xl font-bold text-indigo-900">${stats.totalInternalLinks}</p>
+        <div class="glass p-5 rounded-xl border border-pink-500/30 bg-gradient-to-br from-pink-500/10 to-transparent">
+          <p class="text-sm text-pink-400 mb-2 font-semibold">Celkem interních odkazů</p>
+          <p class="text-3xl font-bold text-dark-text">${stats.totalInternalLinks}</p>
         </div>
-        <div class="bg-green-50 p-4 rounded-lg">
-          <p class="text-sm text-green-600">Mobile-friendly stránek</p>
-          <p class="text-2xl font-bold text-green-900">${stats.mobileFriendlyPages} / ${stats.totalPages}</p>
+        <div class="glass p-5 rounded-xl border border-green-500/30 bg-gradient-to-br from-green-500/10 to-transparent">
+          <p class="text-sm text-green-400 mb-2 font-semibold">Mobile-friendly stránek</p>
+          <p class="text-3xl font-bold text-dark-text">${stats.mobileFriendlyPages} / ${stats.totalPages}</p>
         </div>
       </div>
       
       ${stats.topIssues && stats.topIssues.length > 0 ? `
       <div class="mb-6">
-        <h3 class="text-lg font-semibold mb-3">🔴 Top problémy</h3>
+        <h3 class="text-lg font-semibold mb-4 text-dark-text">🔴 Top problémy</h3>
         <div class="space-y-2">
           ${stats.topIssues.slice(0, 5).map((item, idx) => `
-            <div class="flex items-center justify-between p-3 bg-red-50 rounded">
-              <span class="text-sm">${idx + 1}. ${item.issue}</span>
-              <span class="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded">${item.count}x</span>
+            <div class="flex items-center justify-between p-4 glass rounded-xl border-l-4 border-red-500">
+              <span class="text-sm text-dark-text">${idx + 1}. ${item.issue}</span>
+              <span class="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-semibold rounded-lg border border-red-500/30">${item.count}x</span>
             </div>
           `).join('')}
         </div>
@@ -575,24 +653,24 @@ function displayResults(data) {
       
       ${data.advancedChecks ? `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="p-4 bg-yellow-50 rounded-lg">
-          <h3 class="font-semibold mb-2">Sitemap</h3>
-          <p class="text-sm ${data.advancedChecks.sitemap.valid ? 'text-green-600' : 'text-red-600'}">
+        <div class="glass p-5 rounded-xl border border-yellow-500/30">
+          <h3 class="font-semibold mb-3 text-dark-text">Sitemap</h3>
+          <p class="text-sm ${data.advancedChecks.sitemap.valid ? 'text-green-400' : 'text-red-400'} font-semibold">
             ${data.advancedChecks.sitemap.valid ? '✓ Validní' : '✗ Nevalidní'}
           </p>
           ${data.advancedChecks.sitemap.issues && data.advancedChecks.sitemap.issues.length > 0 ? `
-            <ul class="text-xs text-yellow-800 mt-2 list-disc list-inside">
+            <ul class="text-xs text-yellow-400 mt-3 list-disc list-inside space-y-1">
               ${data.advancedChecks.sitemap.issues.map(issue => `<li>${issue}</li>`).join('')}
             </ul>
           ` : ''}
         </div>
-        <div class="p-4 bg-yellow-50 rounded-lg">
-          <h3 class="font-semibold mb-2">robots.txt</h3>
-          <p class="text-sm ${data.advancedChecks.robots.exists ? 'text-green-600' : 'text-red-600'}">
+        <div class="glass p-5 rounded-xl border border-yellow-500/30">
+          <h3 class="font-semibold mb-3 text-dark-text">robots.txt</h3>
+          <p class="text-sm ${data.advancedChecks.robots.exists ? 'text-green-400' : 'text-red-400'} font-semibold">
             ${data.advancedChecks.robots.exists ? '✓ Existuje' : '✗ Chybí'}
           </p>
           ${data.advancedChecks.robots.issues && data.advancedChecks.robots.issues.length > 0 ? `
-            <ul class="text-xs text-yellow-800 mt-2 list-disc list-inside">
+            <ul class="text-xs text-yellow-400 mt-3 list-disc list-inside space-y-1">
               ${data.advancedChecks.robots.issues.map(issue => `<li>${issue}</li>`).join('')}
             </ul>
           ` : ''}
@@ -608,38 +686,38 @@ function displayResults(data) {
   const okCount = data.results.filter(r => r.status === 'ok').length;
   
   summary.innerHTML = `
-    <h2 class="text-xl font-semibold mb-4">Shrnutí analýzy</h2>
+    <h2 class="text-2xl font-bold mb-6 gradient-text">Shrnutí analýzy</h2>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-gray-50 p-4 rounded-lg">
-        <p class="text-sm text-gray-600">Celkem stránek</p>
-        <p class="text-2xl font-bold text-gray-900">${data.results.length}</p>
+      <div class="glass p-5 rounded-xl border border-dark-border/30">
+        <p class="text-sm text-dark-text-muted mb-2 font-semibold">Celkem stránek</p>
+        <p class="text-3xl font-bold text-dark-text">${data.results.length}</p>
       </div>
-      <div class="bg-red-50 p-4 rounded-lg">
-        <p class="text-sm text-red-600">Chyby</p>
-        <p class="text-2xl font-bold text-red-900">${errorCount}</p>
+      <div class="glass p-5 rounded-xl border border-red-500/30 bg-gradient-to-br from-red-500/10 to-transparent">
+        <p class="text-sm text-red-400 mb-2 font-semibold">Chyby</p>
+        <p class="text-3xl font-bold text-red-400">${errorCount}</p>
       </div>
-      <div class="bg-yellow-50 p-4 rounded-lg">
-        <p class="text-sm text-yellow-600">Varování</p>
-        <p class="text-2xl font-bold text-yellow-900">${warningCount}</p>
+      <div class="glass p-5 rounded-xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
+        <p class="text-sm text-yellow-400 mb-2 font-semibold">Varování</p>
+        <p class="text-3xl font-bold text-yellow-400">${warningCount}</p>
       </div>
-      <div class="bg-green-50 p-4 rounded-lg">
-        <p class="text-sm text-green-600">OK</p>
-        <p class="text-2xl font-bold text-green-900">${okCount}</p>
+      <div class="glass p-5 rounded-xl border border-green-500/30 bg-gradient-to-br from-green-500/10 to-transparent">
+        <p class="text-sm text-green-400 mb-2 font-semibold">OK</p>
+        <p class="text-3xl font-bold text-green-400">${okCount}</p>
       </div>
       ${(() => {
         const scores = data.results.filter(r => r.seo_score?.score !== undefined).map(r => r.seo_score.score);
         if (scores.length > 0) {
           const avgScore = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
           return `
-            <div class="bg-blue-50 p-4 rounded-lg">
-              <p class="text-sm text-blue-600">Průměrné SEO skóre</p>
-              <div class="flex items-center space-x-2 mt-1">
-                <div class="w-12 h-12 rounded-full ${getScoreColor(avgScore)} flex items-center justify-center">
-                  <span class="text-lg font-bold text-white">${avgScore}</span>
+            <div class="glass p-5 rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+              <p class="text-sm text-indigo-400 mb-3 font-semibold">Průměrné SEO skóre</p>
+              <div class="flex items-center space-x-3">
+                <div class="w-14 h-14 rounded-full ${getScoreColor(avgScore)} flex items-center justify-center shadow-lg">
+                  <span class="text-xl font-bold text-white">${avgScore}</span>
                 </div>
                 <div>
-                  <p class="text-2xl font-bold text-blue-900">${avgScore}/100</p>
-                  <p class="text-xs text-blue-600">${scores.length} stránek hodnoceno</p>
+                  <p class="text-2xl font-bold text-dark-text">${avgScore}/100</p>
+                  <p class="text-xs text-dark-text-muted">${scores.length} stránek hodnoceno</p>
                 </div>
               </div>
             </div>
@@ -649,10 +727,10 @@ function displayResults(data) {
       })()}
     </div>
     ${data.duplicateTitles.length > 0 || data.duplicateDescriptions.length > 0 ? `
-      <div class="mt-4 p-4 bg-yellow-50 rounded-lg">
-        <p class="font-semibold text-yellow-900 mb-2">Duplicity:</p>
-        ${data.duplicateTitles.length > 0 ? `<p class="text-sm text-yellow-800">Duplicitní title: ${data.duplicateTitles.length}</p>` : ''}
-        ${data.duplicateDescriptions.length > 0 ? `<p class="text-sm text-yellow-800">Duplicitní description: ${data.duplicateDescriptions.length}</p>` : ''}
+      <div class="mt-4 glass p-5 rounded-xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
+        <p class="font-semibold text-yellow-400 mb-3">Duplicity:</p>
+        ${data.duplicateTitles.length > 0 ? `<p class="text-sm text-yellow-300 mb-1">Duplicitní title: ${data.duplicateTitles.length}</p>` : ''}
+        ${data.duplicateDescriptions.length > 0 ? `<p class="text-sm text-yellow-300">Duplicitní description: ${data.duplicateDescriptions.length}</p>` : ''}
       </div>
     ` : ''}
   `;

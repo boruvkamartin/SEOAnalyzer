@@ -2,25 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  * {
+    @apply border-dark-border;
+  }
+  
+  body {
+    @apply bg-dark-bg text-dark-text;
+  }
+}
+
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 
+           text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 
+           shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60 
+           transform hover:scale-105 active:scale-95;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-dark-surface hover:bg-dark-surface-hover text-dark-text border border-dark-border
+           font-semibold py-3 px-6 rounded-xl transition-all duration-200 
+           shadow-md hover:shadow-lg;
+  }
+  
+  .card {
+    @apply bg-dark-surface border border-dark-border rounded-2xl shadow-xl 
+           backdrop-blur-sm bg-opacity-80;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-xl 
+           text-dark-text placeholder-dark-text-muted focus:ring-2 focus:ring-indigo-500 
+           focus:border-indigo-500 transition-all duration-200;
   }
   
   .status-ok {
-    @apply bg-seo-green text-white;
+    @apply bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold;
   }
   
   .status-warning {
-    @apply bg-seo-yellow text-white;
+    @apply bg-gradient-to-r from-yellow-500 to-amber-500 text-white font-semibold;
   }
   
   .status-error {
-    @apply bg-seo-red text-white;
+    @apply bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold;
+  }
+  
+  .glass {
+    @apply bg-dark-surface/80 backdrop-blur-md border border-dark-border/50;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+  
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
   }
 }
 

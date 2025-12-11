@@ -314,12 +314,20 @@ export const handler: Handler = async (event, context) => {
     };
   } catch (error: any) {
     console.error('Error in analyze function:', error);
+    
+    // Zkontroluj, zda je to timeout error
+    let errorMessage = error.message || 'Chyba při analýze';
+    if (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.name === 'TimeoutError') {
+      errorMessage = 'Analýza trvala příliš dlouho a byla přerušena. Zkuste snížit počet stránek pomocí limitu nebo přeskočit validaci broken links.';
+    }
+    
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        message: error.message || 'Chyba při analýze',
-        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        type: error.name || 'Error'
       })
     };
   }
